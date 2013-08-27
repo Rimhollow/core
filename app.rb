@@ -101,6 +101,7 @@ helpers do
     when :ingest;           archive.ingest_throttle        != 1 ? "#{archive.ingest_throttle} ingests;"               : "1 ingest;"
     when :dissemination;    archive.dissemination_throttle != 1 ? "#{archive.dissemination_throttle} disseminations;" : "1 dissemination;"
     when :withdrawal;       archive.withdrawal_throttle    != 1 ? "#{archive.withdrawal_throttle} withdrawals;"       : "1 withdrawal;"
+    when :d1refresh;        archive.d1refresh_throttle     != 1 ? "#{archive.d1refresh_throttle} d1 refreshes;"       : "1 d1 refresh;"
     else ; "huh?"
     end
   end
@@ -133,7 +134,9 @@ end
 
 before do
 
-  unless %w(/stylesheet.css /favicon.ico).include? request.path
+# Cosmetic change for the University of Kentucky
+  unless %w(/stylesheet.css /favicon.ico /ukyrr_logo).include? request.path
+#  unless %w(/stylesheet.css /favicon.ico).include? request.path
     @user = User.get session['user_name']
     redirect '/login' unless @user
   end
@@ -276,13 +279,13 @@ get '/packages?/?' do
                         when 'submitted'
                           "submit"
                         when 'rejected'
-                          ["reject","daitss v.1 reject"]  # github #717
+                          "reject"
                         when 'archived'
                           "ingest finished"
                         when 'disseminated'
                           "disseminate finished"
                         when 'error'
-                          ["ingest snafu", "disseminate snafu"]
+                          ["ingest snafu", "disseminate snafu", "d1refresh snafu"]
                         when 'withdrawn'
                           "withdraw finished"
                         else
@@ -492,14 +495,13 @@ get '/package/:id/descriptor' do |id|
   @package = @user.packages.get(id) or not_found
   @aip = @package.aip or not_found
   not_found unless @aip
-  content_type  'application/octet-stream'   # github issue 654, force a download
-  attachment @package.id+'_aip_descriptor.xml'
+  content_type = 'application/xml'
   @aip.xml
-end 
+end
 
 get '/package/:p_id/dip/:d_id' do |p_id, d_id|
   @package = @user.packages.get(p_id) or not_found
-  dip_path = File.join archive.disseminate_path+'/'+@package.project_account_id, d_id
+  dip_path = File.join archive.disseminate_path, d_id
   File.exist?(dip_path) or not_found
   send_file dip_path
 end
@@ -509,35 +511,9 @@ get '/package/:id/ingest_report' do |id|
   @package = @user.packages.get(id) or not_found
   not_found unless @package.status == "archived"
  
-  begin
-  rep = archive.ingest_report id   ##ilt  archive.ingest_report id
-  rescue => e
-	 puts  "Unexpected error: #{e}, back trace follows:"
-	      e.backtrace.each { |line| puts         line.chomp }
-	        puts         "Can't continue  quitting."
-		exit
-  end
+  rep = archive.ingest_report id
   doc = Nokogiri::XML rep
   xslt  = Nokogiri::XSLT(File.read('public/daitss_report_xhtml.xsl'))
-  html = xslt.transform(doc)
-  html.to_s
-  
-end
-
-get '/package/:id/disseminate_report' do |id|
-  @package = @user.packages.get(id) or not_found
-  not_found unless @package.status == "archived"
- 
-  begin
-  rep = archive.disseminate_report id   ##ilt  archive.ingest_report id
-  rescue => e
-	 puts  "Unexpected error: #{e}, back trace follows:"
-	      e.backtrace.each { |line| puts         line.chomp }
-	        puts         "Can't continue  quitting."
-		exit
-  end
-  doc = Nokogiri::XML rep
-  xslt  = Nokogiri::XSLT(File.read('public/daitss_disseminate_report_xhtml.xsl'))  #github 721
   html = xslt.transform(doc)
   html.to_s
   
@@ -1348,9 +1324,13 @@ post "/batches/:batch_id" do |batch_id|
   end
 end
 
-get '/fda_logo' do
-  File.read "public/FDA-colorLogo.png"
+# Cosmetic change for the University of Kentucky
+get '/ukyrr_logo' do
+ File.read "public/ukyrr_logo.png"
 end
+# get '/fda_logo' do
+#  File.read "public/FDA-colorLogo.png"
+# end
 
 get '/requests' do
   if params['display_all'] == "true"

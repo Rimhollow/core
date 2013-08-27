@@ -1,4 +1,5 @@
-%img{ :src => '/fda_logo' }
+-# Cosmetic change for the University of Kentucky
+-# %img{ :src => '/fda_logo' }
 
 %h1
   daitss
@@ -17,7 +18,7 @@
     %td= Sip.count
   %tr
     %th files
-    %td= (Sip.sum :number_of_datafiles )
+    %td= Sip.sum :number_of_datafiles
   %tr
     %th total size
     %td= sprintf('%.2f', Sip.sum(:size_in_bytes).to_i / 1000000) + " MB"
@@ -29,7 +30,7 @@
 %table
   %tr
     %th count
-    %td= Aip.count - Aip.all(:datafile_count  => 0).count - Aip.all(:datafile_count  => nil).count
+    %td= Aip.count
   %tr
     %th files
     %td= Aip.sum :datafile_count
